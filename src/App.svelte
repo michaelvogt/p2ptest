@@ -1,8 +1,12 @@
 <script>
     import {onMount} from 'svelte';
 
-    import {getServicesAtLocation} from 'ssd-access';
+    import { v4 as uuidv4 } from 'uuid';
+    import Perge from 'perge';
+    import Automerge, { change } from 'automerge';
+    import Peer from 'peerjs';
 
+    import {getServicesAtLocation} from 'ssd-access';
     import {getCurrentLocation} from "./utilities";
 
 
@@ -18,6 +22,11 @@
     // Value to be synced between the peers
     let valueToSync
 
+    let perge;
+    let docSet;
+
+    let connections = [];
+
 
     // Runs at startup of the app
     onMount(() => {
@@ -30,13 +39,21 @@
             localPeerId = urlParams.get('peerid');
 
             // Register with Signaling Server
-            connectToSignalingServer();
+            connectToSignalingServer(localPeerId);
+            subscribeToDocs();
+            setupPeerEvents();
+
+            console.log('headless setup done');
         } else {
             // Get headless client peer id from service discovery
             requestHeadlessPeerId()
                 .then(peerId => {
                     headlessPeerId = peerId;
                     connectToHeadlessClient();
+                    subscribeToDocs();
+                    setupPeerEvents();
+
+                    console.log('client setup done')
                 })
                 .catch(error => console.log(error));
 
@@ -45,9 +62,19 @@
         }
     });
 
+    function setupPeerEvents() {
+        perge.peer.on('open', () => {
+            console.log('ID: ' + perge.peer.id);
+        });
 
-    function connectToSignalingServer() {
+        perge.peer.on('connection', (newConnection) => {
+            connections.push(newConnection);
+            console.log("Connected to: " + newConnection.peer);
+        });
 
+        perge.peer.on('error', (error) => {
+            console.error(error)
+        })
     }
 
     function requestHeadlessPeerId() {
@@ -81,11 +108,39 @@
     }
 
     function connectToHeadlessClient() {
+        // Initialize perge connection with client id
+        localPeerId = uuidv4();
+        connectToSignalingServer(localPeerId);
 
+        // Connect to headless client
+        perge.connect(headlessPeerId);
+
+        subscribeToDocs();
     }
 
     function connectToPeers() {
         // Connect to peers with id received from headless client
+    }
+
+    function connectToSignalingServer(peerId) {
+        let docSet = new Automerge.DocSet();
+        const peer = new Peer(peerId, {
+            // debug: 2,
+            // host: 'rtc.oscp.cloudpose.io',
+            // port: 5678,
+            // key: 'peerjs-mvtest',
+            // path: '/'
+        });
+        perge = new Perge(peerId, {
+            peer: peer,
+            docSet: docSet
+        });
+    }
+
+    function subscribeToDocs() {
+        perge.subscribe(() => {
+            console.log(JSON.stringify(docSet.docs, null, 2));
+        })
     }
 </script>
 

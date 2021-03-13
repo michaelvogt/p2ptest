@@ -20,7 +20,9 @@ module.exports = {
     /* ... */
   },
   devOptions: {
-    /* ... */
+    secure: true,
+    hostname: '0.0.0.0',
+    open: 'none'
   },
   buildOptions: {
     /* ... */
