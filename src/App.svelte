@@ -25,9 +25,6 @@
     let perge;
     let docSet;
 
-    let connections = [];
-
-
     // Runs at startup of the app
     onMount(() => {
         const queryString = window.location.search;
@@ -53,27 +50,41 @@
                     subscribeToDocs();
                     setupPeerEvents();
 
+                    // When list of peers currently connected to headless client received -- register event
+                    connectToPeers();
+
                     console.log('client setup done')
                 })
                 .catch(error => console.log(error));
-
-            // When list of peers currently connected to headless client received -- register event
-            connectToPeers();
         }
     });
 
     function setupPeerEvents() {
-        perge.peer.on('open', () => {
-            console.log('ID: ' + perge.peer.id);
+        //Emitted when a connection to the PeerServer is established.
+        perge.peer.on('open', (id) => {
+            console.log('Connection to the PeerServer established. Peer ID ' + id);
+            //perge.peer.id = id // is this needed?
         });
 
-        perge.peer.on('connection', (newConnection) => {
-            connections.push(newConnection);
-            console.log("Connected to: " + newConnection.peer);
+        // Emitted when a new data connection is established from a remote peer.
+        perge.peer.on('connection', (dataConnection) => {
+            console.log('Connection established with remote peer: ' + dataConnection.peer);
+            //dataConnection.open = true
         });
 
+        // Errors on the peer are almost always fatal and will destroy the peer.
         perge.peer.on('error', (error) => {
-            console.error(error)
+            console.error('Error:' + error)
+        })
+
+        // Emitted when the peer is disconnected from the signalling server
+        perge.peer.on('disconnected', () => {
+            console.log('Disconnected from PeerServer')
+        })
+
+        // Emitted when the peer is destroyed and can no longer accept or create any new connections
+        perge.peer.on('close', () => {
+            console.log("Connection closed.")
         })
     }
 
@@ -125,11 +136,25 @@
     function connectToSignalingServer(peerId) {
         let docSet = new Automerge.DocSet();
         const peer = new Peer(peerId, {
-            // debug: 2,
-            // host: 'rtc.oscp.cloudpose.io',
-            // port: 5678,
-            // key: 'peerjs-mvtest',
-            // path: '/'
+            /*
+            debug: 2,
+            host: 'rtc.oscp.cloudpose.io',
+            port: 5678,
+            key: 'peerjs-mvtest',
+            path: '/'
+            */
+            /*
+            debug: 2,
+            host: '192.168.93.44',
+            port: 9000,
+            key: 'peerjs',
+            path: '/',
+            secure: true,
+            stream: true
+            */
+            host:'peerjs-server.herokuapp.com',
+            secure:true,
+            port:443
         });
         perge = new Perge(peerId, {
             peer: peer,
