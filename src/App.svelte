@@ -34,6 +34,7 @@
             console.log(localPeerId);
 
             setupPerge();
+            setupPeerEvents();
         } else {
             // Get headless client peer id from service discovery
             requestHeadlessPeerId()
@@ -44,6 +45,7 @@
                     console.log(localPeerId);
 
                     setupPerge();
+                    setupPeerEvents();
                 })
                 .catch(error => console.log(error));
 
@@ -52,7 +54,8 @@
         }
     });
 
-    function setupEvents() {
+    function setupPeerEvents() {
+
         //Emitted when a connection to the PeerServer is established.
         instance.peer.on('open', (id) => {
             console.log('Connection to the PeerServer established. Peer ID ' + id);
@@ -69,22 +72,18 @@
 
         // Errors on the peer are almost always fatal and will destroy the peer.
         instance.peer.on('error', (error) => {
-            console.error(error)
+            console.error('Error:' + error)
         })
 
         // Emitted when the peer is disconnected from the signalling server
         instance.peer.on('disconnected', () => {
-            console.log('Connection disconnected.');
+            console.log('Disconnected from PeerServer')
         });
 
         // Emitted when the peer is destroyed and can no longer accept or create any new connections
         instance.peer.on('close', () => {
             console.log('Connection closed.');
         });
-
-        instance.subscribe(() => {
-            console.log(JSON.stringify(docSet.docs, null, 2));
-        })
     }
 
     function setupPerge() {
