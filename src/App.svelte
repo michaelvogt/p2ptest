@@ -32,29 +32,47 @@
         if (urlParams.has('peerid')) {
             // Defines the headless client
             // This ID needs to be registered with service discovery
-            localPeerId = uuidv4();     // urlParams.get('peerid');
+            localPeerId = urlParams.get('peerid');
             console.log(localPeerId);
 
-            // Register with Signaling Server
-            connectToSignalingServer(localPeerId);
-            setupEvents();
-
-            console.log('headless setup done');
+            setupPerge();
         } else {
             // Get headless client peer id from service discovery
             requestHeadlessPeerId()
                 .then(peerId => {
                     headlessPeerId = peerId;
-                    connectToHeadlessClient();
 
-                    console.log('client setup done')
+                    localPeerId = uuidv4()
+                    console.log(localPeerId);
+
+                    setupPerge();
                 })
                 .catch(error => console.log(error));
 
             // When list of peers currently connected to headless client received -- register event
-            connectToPeers();
+            // connectToPeers();
         }
     });
+
+    function setupPerge() {
+        const peer = window.peer = new Peer(localPeerId, {
+            host:'peerjs-server.herokuapp.com', secure:true, port:443
+        })
+
+        let docSet = window.docSet = new Automerge.DocSet()
+
+        instance = window.instance = new Perge(localPeerId, {
+            decode: JSON.parse, // msgpack or protobuf would also be a good option
+            encode: JSON.stringify,
+            peer: peer,
+            docSet: docSet
+        })
+
+        // This handler gets invoked whenever the DocSet is updated, useful for re-rendering views.
+        instance.subscribe(() => {
+            console.log(JSON.stringify(docSet.docs, null, 2))
+        })
+    }
 
     function setupEvents() {
         instance.peer.on('open', (id) => {
@@ -64,7 +82,7 @@
         instance.peer.on('connection', (connection) => {
             console.log("Connected to: " + connection.peer);
 
-            connection.on('data', function(data) {
+            connection.on('data', function (data) {
                 console.log('Received', data);
             });
         });
@@ -116,40 +134,21 @@
         });
     }
 
-    function connectToHeadlessClient() {
-        // Initialize perge connection with client id
-        localPeerId = uuidv4();
-        connectToSignalingServer(localPeerId);
-        setupEvents();
-
-        // Connect to headless client
-        connection = instance.connect(headlessPeerId, instance.peer.connect(headlessPeerId));
-    }
-
-    function connectToPeers() {
-        // Connect to peers with id received from headless client
-    }
-
-    docSet = window.docSet = new Automerge.DocSet();
-    function connectToSignalingServer(peerId) {
-        const peer = window.peer = new Peer(peerId, {
-            host:'peerjs-server.herokuapp.com', secure:true, port:443
-            // debug: 2,
-            // host: 'rtc.oscp.cloudpose.io',
-            // port: 5678,
-            // key: 'peerjs-mvtest',
-            // path: '/'
-        });
-        instance = window.instance = new Perge(peerId, {
-            peer: peer,
-            docSet: docSet
-        });
-    }
-
-    function sendData() {
-        const doc = instance.select('docid')(change, d => {
+    function update() {
+        const id = 'docid'
+        // Update the document
+        const doc = instance.select(id)(change, d => {
             d.now = new Date().valueOf()
         })
+    }
+
+    function connect (e) {
+        e.preventDefault()
+
+        instance.connect(headlessPeerId, peer.connect(headlessPeerId))
+        console.log(JSON.stringify(
+            Array.from(peer._connections.keys()
+            ), null, 2))
     }
 </script>
 
@@ -165,4 +164,8 @@
     <input type="number" bind:value={valueToSync}/>
 </div>
 
-<button on:click={sendData}>Send</button>
+{#if headlessPeerId}
+<button on:click={connect}>Connect</button>
+{/if}
+
+<button on:click={update}>Update</button>
