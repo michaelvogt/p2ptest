@@ -1,9 +1,9 @@
 <script>
     import {onMount} from 'svelte';
 
-    import { v4 as uuidv4 } from 'uuid';
+    import {v4 as uuidv4} from 'uuid';
     import Perge from 'perge';
-    import Automerge, { change } from 'automerge';
+    import Automerge, {change} from 'automerge'
     import Peer from 'peerjs';
 
     import {getServicesAtLocation} from 'ssd-access';
@@ -16,32 +16,28 @@
     // Peer ID of this app instance
     let localPeerId;
 
-    // Peer IDs of connected peers
-    let connectedPeers;
-
     // Value to be synced between the peers
     let valueToSync
 
-    let perge;
+    let instance;
     let docSet;
 
-    let connections = [];
+    let connection;
 
 
     // Runs at startup of the app
     onMount(() => {
-        const queryString = window.location.search;
-        const urlParams = new URLSearchParams(queryString);
+        const urlParams = new URLSearchParams(location.search);
 
         if (urlParams.has('peerid')) {
             // Defines the headless client
             // This ID needs to be registered with service discovery
-            localPeerId = urlParams.get('peerid');
+            localPeerId = uuidv4();     // urlParams.get('peerid');
+            console.log(localPeerId);
 
             // Register with Signaling Server
             connectToSignalingServer(localPeerId);
-            subscribeToDocs();
-            setupPeerEvents();
+            setupEvents();
 
             console.log('headless setup done');
         } else {
@@ -50,8 +46,6 @@
                 .then(peerId => {
                     headlessPeerId = peerId;
                     connectToHeadlessClient();
-                    subscribeToDocs();
-                    setupPeerEvents();
 
                     console.log('client setup done')
                 })
@@ -62,18 +56,33 @@
         }
     });
 
-    function setupPeerEvents() {
-        perge.peer.on('open', () => {
-            console.log('ID: ' + perge.peer.id);
+    function setupEvents() {
+        instance.peer.on('open', (id) => {
+            console.log('open - ID: ' + id);
         });
 
-        perge.peer.on('connection', (newConnection) => {
-            connections.push(newConnection);
-            console.log("Connected to: " + newConnection.peer);
+        instance.peer.on('connection', (connection) => {
+            console.log("Connected to: " + connection.peer);
+
+            connection.on('data', function(data) {
+                console.log('Received', data);
+            });
         });
 
-        perge.peer.on('error', (error) => {
+        instance.peer.on('disconnected', () => {
+            console.log('Connection disconnected.');
+        });
+
+        instance.peer.on('close', () => {
+            console.log('Connection closed.');
+        });
+
+        instance.peer.on('error', (error) => {
             console.error(error)
+        })
+
+        instance.subscribe(() => {
+            console.log(JSON.stringify(docSet.docs, null, 2));
         })
     }
 
@@ -111,35 +120,35 @@
         // Initialize perge connection with client id
         localPeerId = uuidv4();
         connectToSignalingServer(localPeerId);
+        setupEvents();
 
         // Connect to headless client
-        perge.connect(headlessPeerId);
-
-        subscribeToDocs();
+        connection = instance.connect(headlessPeerId, instance.peer.connect(headlessPeerId));
     }
 
     function connectToPeers() {
         // Connect to peers with id received from headless client
     }
 
+    docSet = window.docSet = new Automerge.DocSet();
     function connectToSignalingServer(peerId) {
-        let docSet = new Automerge.DocSet();
-        const peer = new Peer(peerId, {
+        const peer = window.peer = new Peer(peerId, {
+            host:'peerjs-server.herokuapp.com', secure:true, port:443
             // debug: 2,
             // host: 'rtc.oscp.cloudpose.io',
             // port: 5678,
             // key: 'peerjs-mvtest',
             // path: '/'
         });
-        perge = new Perge(peerId, {
+        instance = window.instance = new Perge(peerId, {
             peer: peer,
             docSet: docSet
         });
     }
 
-    function subscribeToDocs() {
-        perge.subscribe(() => {
-            console.log(JSON.stringify(docSet.docs, null, 2));
+    function sendData() {
+        const doc = instance.select('docid')(change, d => {
+            d.now = new Date().valueOf()
         })
     }
 </script>
@@ -155,3 +164,5 @@
     <h1>p2p test</h1>
     <input type="number" bind:value={valueToSync}/>
 </div>
+
+<button on:click={sendData}>Send</button>
