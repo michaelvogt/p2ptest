@@ -67,14 +67,14 @@
             });
         });
 
-        instance.peer.on('disconnected', () => {
-            console.log('Connection disconnected.');
-        });
-
         // Errors on the peer are almost always fatal and will destroy the peer.
         instance.peer.on('error', (error) => {
             console.error(error)
         })
+
+        instance.peer.on('disconnected', () => {
+            console.log('Connection disconnected.');
+        });
 
         // Emitted when the peer is disconnected from the signalling server
         instance.peer.on('disconnected', () => {
