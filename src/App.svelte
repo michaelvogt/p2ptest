@@ -75,12 +75,14 @@
     }
 
     function setupEvents() {
+        //Emitted when a connection to the PeerServer is established.
         instance.peer.on('open', (id) => {
-            console.log('open - ID: ' + id);
+            console.log('Connection to the PeerServer established. Peer ID ' + id);
         });
 
+        // Emitted when a new data connection is established from a remote peer.
         instance.peer.on('connection', (connection) => {
-            console.log("Connected to: " + connection.peer);
+            console.log('Connection established with remote peer: ' + connection.peer);
 
             connection.on('data', function (data) {
                 console.log('Received', data);
@@ -91,13 +93,20 @@
             console.log('Connection disconnected.');
         });
 
-        instance.peer.on('close', () => {
-            console.log('Connection closed.');
-        });
-
+        // Errors on the peer are almost always fatal and will destroy the peer.
         instance.peer.on('error', (error) => {
             console.error(error)
         })
+
+        // Emitted when the peer is disconnected from the signalling server
+        instance.peer.on('disconnected', () => {
+            console.log('Connection disconnected.');
+        });
+
+        // Emitted when the peer is destroyed and can no longer accept or create any new connections
+        instance.peer.on('close', () => {
+            console.log('Connection closed.');
+        });
 
         instance.subscribe(() => {
             console.log(JSON.stringify(docSet.docs, null, 2));
