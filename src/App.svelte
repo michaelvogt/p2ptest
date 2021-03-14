@@ -72,10 +72,6 @@
             console.error(error)
         })
 
-        instance.peer.on('disconnected', () => {
-            console.log('Connection disconnected.');
-        });
-
         // Emitted when the peer is disconnected from the signalling server
         instance.peer.on('disconnected', () => {
             console.log('Connection disconnected.');
