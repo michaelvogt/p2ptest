@@ -22,8 +22,6 @@
     let instance;
     let docSet;
 
-    let connection;
-
 
     // Runs at startup of the app
     onMount(() => {
@@ -53,26 +51,6 @@
             // connectToPeers();
         }
     });
-
-    function setupPerge() {
-        const peer = window.peer = new Peer(localPeerId, {
-            host:'peerjs-server.herokuapp.com', secure:true, port:443
-        })
-
-        let docSet = window.docSet = new Automerge.DocSet()
-
-        instance = window.instance = new Perge(localPeerId, {
-            decode: JSON.parse, // msgpack or protobuf would also be a good option
-            encode: JSON.stringify,
-            peer: peer,
-            docSet: docSet
-        })
-
-        // This handler gets invoked whenever the DocSet is updated, useful for re-rendering views.
-        instance.subscribe(() => {
-            console.log(JSON.stringify(docSet.docs, null, 2))
-        })
-    }
 
     function setupEvents() {
         //Emitted when a connection to the PeerServer is established.
@@ -110,6 +88,26 @@
 
         instance.subscribe(() => {
             console.log(JSON.stringify(docSet.docs, null, 2));
+        })
+    }
+
+    function setupPerge() {
+        const peer = window.peer = new Peer(localPeerId, {
+            host:'peerjs-server.herokuapp.com', secure:true, port:443
+        })
+
+        let docSet = window.docSet = new Automerge.DocSet()
+
+        instance = window.instance = new Perge(localPeerId, {
+            decode: JSON.parse, // msgpack or protobuf would also be a good option
+            encode: JSON.stringify,
+            peer: peer,
+            docSet: docSet
+        })
+
+        // This handler gets invoked whenever the DocSet is updated, useful for re-rendering views.
+        instance.subscribe(() => {
+            console.log(JSON.stringify(docSet.docs, null, 2))
         })
     }
 
