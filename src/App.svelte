@@ -20,7 +20,7 @@
     let valueToSync
 
     let instance;
-    let docSet;
+    const docSet = new Automerge.DocSet();
 
 
     // Runs at startup of the app
@@ -55,7 +55,6 @@
     });
 
     function setupPeerEvents() {
-
         //Emitted when a connection to the PeerServer is established.
         instance.peer.on('open', (id) => {
             console.log('Connection to the PeerServer established. Peer ID ' + id);
@@ -87,13 +86,11 @@
     }
 
     function setupPerge() {
-        const peer = window.peer = new Peer(localPeerId, {
+        const peer = new Peer(localPeerId, {
             host:'peerjs-server.herokuapp.com', secure:true, port:443
         })
 
-        let docSet = window.docSet = new Automerge.DocSet()
-
-        instance = window.instance = new Perge(localPeerId, {
+        instance = new Perge(localPeerId, {
             decode: JSON.parse, // msgpack or protobuf would also be a good option
             encode: JSON.stringify,
             peer: peer,
@@ -102,7 +99,10 @@
 
         // This handler gets invoked whenever the DocSet is updated, useful for re-rendering views.
         instance.subscribe(() => {
-            console.log(JSON.stringify(docSet.docs, null, 2))
+            console.log(JSON.stringify(docSet.docs, null, 2));
+            const element = document.createElement('div');
+            element.innerText = JSON.stringify(docSet.docs, null, 2);
+            document.body.appendChild(element);
         })
     }
 
@@ -147,9 +147,9 @@
     function connect (e) {
         e.preventDefault()
 
-        instance.connect(headlessPeerId, peer.connect(headlessPeerId))
+        instance.connect(headlessPeerId)
         console.log(JSON.stringify(
-            Array.from(peer._connections.keys()
+            Array.from(instance.peer._connections.keys()
             ), null, 2))
     }
 </script>
